@@ -1,6 +1,7 @@
 cmake_minimum_required(VERSION 3.5)
 project(uade)
 
+# OSX does not have these by default
 include_directories(SYSTEM /usr/local/include)
 link_directories(/usr/local/lib)
 
@@ -34,7 +35,8 @@ configure_file(ossupport.c.in ossupport.c)
 
 # Configure options
 
-set(UADE_VERSION "2.13")
+file(READ version UADE_VERSION)
+string(STRIP ${UADE_VERSION} UADE_VERSION)
 set(CONFIG_BASE_DIR "/usr/local/share/uade")
 set(CONFIG_UADE_CORE "/usr/local/lib/uade/uadecore")
 configure_file(options.h.in uade/options.h)
@@ -120,18 +122,19 @@ target_compile_definitions(uadecore PRIVATE -DPART_1 -DPART_2 -DPART_3 -DPART_4 
 target_compile_options(uadecore PRIVATE -Wno-format -Wno-implicit-function-declaration)
 target_include_directories(uadecore PUBLIC
     ${CMAKE_CURRENT_BINARY_DIR}
-    src/
-    src/include/
-    src/frontends/include/
+    src
+    src/include
+    src/frontends/include
 )
 
 add_library(uade STATIC ${UADE_SOURCES})
 target_compile_options(uade PRIVATE -Wno-format -Wno-implicit-function-declaration)
+target_link_libraries(uade PUBLIC m)
 target_include_directories(uade PUBLIC
     ${CMAKE_CURRENT_BINARY_DIR}
     bencode/include
-    src/frontends/include/
-    src/frontends/common/
+    src/frontends/include
+    src/frontends/common
 )
 
 add_executable(uade123
@@ -143,4 +146,10 @@ add_executable(uade123
     src/frontends/uade123/uade123.c
     src/frontends/common/unixwalkdir.c
 )
-target_link_libraries(uade123 PRIVATE uade m ao)
+target_link_libraries(uade123 PRIVATE uade ao)
+
+add_executable(uadesimple
+    src/frontends/uadesimple/audio.c
+    src/frontends/uadesimple/uadesimple.c
+)
+target_link_libraries(uadesimple PRIVATE uade ao)
