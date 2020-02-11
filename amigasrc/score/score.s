@@ -9,6 +9,7 @@
 	include	exec_lib.i
 	include	graphics_lib.i
 	include	dos_lib.i
+	include	icon_lib.i
 	include	rmacros.i
 
 	include	np.i
@@ -360,12 +361,31 @@ noepmc
 	lea	intuition_lib_base(pc),a0
 	lea	intuiwarn(pc),a1
 	move.l	#$400,d0
-	bsr	exec_initlibbase
+	bsr	init_lib_base
 	* initialize intuitionbase functions
 	lea	intuition_lib_base(pc),a6
 	lea	intui_allocremember(pc),a0
 	move	jmpcom(pc),-$18C(a6)
 	move.l	a0,-$18C+2(a6)
+
+	* initialize iconbase with failures
+	lea	icon_lib_base(pc),a0
+	lea	iconwarn(pc),a1		* default handler (warning)
+	moveq	#108,d0			* see icon_lib.i
+	bsr	init_lib_base
+
+	* initialize iconbase functions	- register the few functions actually
+	* used by PokeyNoise.
+	lea	icon_lib_base(pc),a6
+	lea	icon_get_disk_object(pc),a0
+	move	jmpcom(pc),GetDiskObject(a6)
+	move.l	a0,GetDiskObject+2(a6)
+	lea	iconfree(pc),a0
+	move	jmpcom(pc),FreeDiskObject(a6)
+	move.l	a0,FreeDiskObject+2(a6)
+	lea	icon_find_tool_type(pc),a0
+	move	jmpcom(pc),FindToolType(a6)
+	move.l	a0,FindToolType+2(a6)
 
 	* ntsc/pal checking
 	moveq	#$20,d1		* default beamcon0 = $20 for PAL
@@ -1710,7 +1730,112 @@ copystring	pushr	a5
 	pullr	a5
 	rts
 
+iconfree
+	rts				* memory leak.. does not matter.
 
+icon_result	dc.l	0,0
+
+icon_find_tool_type									* char *FindToolType(char **list, char *key)
+	* D0 = (A0, A1) (presumably A0 points to garbage here since respective
+	* parsing is not implemented)
+	push	d1-d7/a0-a6
+	pushr	a1
+	move.l	a1,a0
+	bsr	strlen
+	move.l	d0,d1
+	pullr	a1
+	move.l	icon_result(pc),d0
+	beq.b	.icon_exit
+	move.l	d0,a0
+	move.l	icon_result+4(pc),d0
+	* a0 icon info data
+	* a1 key
+	* d0 icon info size
+	* d1 key size
+	pushr	d1
+	bsr	memmem
+	pullr	d1
+	tst.l	d0
+	beq.b	.icon_exit
+	* Skip key and the following character in the haystack.
+	add.l	d1,d0
+	addq.l	#1,d0
+.icon_exit
+	pull	d1-d7/a0-a6
+	tst.l	d0
+	rts
+
+memmem
+	* a0 haystack, a1 needle.
+	* d0 haystack len, d1 needle len.
+	* returns pointer to needle in haystack in D0.
+	push	d2-d5
+	tst.l	d0
+	beq.b	.not_found_final
+	tst.l	d1
+	beq.b	.not_found_final
+	sub.l	d1,d0
+	bmi.b	.not_found_final
+	addq.l	#1,d0
+	moveq	#0,d2
+.icon_loop_0
+	moveq	#0,d3
+.icon_loop_1
+	move.l	d2,d4
+	add.l	d3,d4
+	move.b	(a1,d3.l),d5
+	cmp.b	(a0,d4.l),d5
+	bne.b	.not_found
+	addq.l	#1,d3
+	cmp.l	d1,d3
+	bne.b	.icon_loop_1
+	move.l	a0,d0
+	add.l	d2,d0
+	pull	d2-d5
+	tst.l	d0
+	rts
+.not_found
+	addq.l	#1,d2
+	cmp.l	d0,d2
+	bne.b	.icon_loop_0
+.not_found_final
+	pull	d2-d5
+	moveq	#0,d0
+	rts
+
+icon_extension	dc.b	'.info',0
+	even
+
+icon_get_disk_object	push	d1-d7/a0-a6
+	lea	icon_extension(pc),a0
+	bsr	copystring
+	lea	loadfilemsg(pc),a0
+	move.l	dtg_PathArrayPtr(a5),4(a0)		* name ptr
+
+	move.l	chippoint(pc),d2
+	move.l	d2,8(a0)				* dest ptr
+	clr.l	12(a0)
+	move.l	#loadfilemsge-loadfilemsg,d0
+	bsr	put_message		* call the uade "C" code via message
+	move.l	msgptr(pc),a0
+	move.l	12(a0),d0
+	move.l	d0,d1
+	tst.l	d0
+	beq.b	loadiconerror
+	lea	chippoint(pc),a2	* memory mgmt?
+	add.l	d0,(a2)
+	and.l	#-16,(a2)
+	add.l	#16,(a2)
+
+	move.l	8(a0),d0 	* function returns pointer to buffer in D0
+	beq.b	loadiconerror
+	lea	icon_result(pc),a1
+	move.l	d0,(a1)
+	move.l	d1,4(a1)
+loadiconerror
+	pull	d1-d7/a0-a6
+	tst.l	d0
+	rts
 
 loadfilemsg	dc.l	UADE_LOADFILE
 	dc.l	0,0,0,0	* name ptr, dest ptr, size in msgptr(pc)+12
@@ -1765,220 +1890,7 @@ loadfileerror	moveq	#0,d0
 	tst.l	d0
 	rts
 
-relocator	cmp.l	#$000003f3,(a0)+
-	bne	hunkerror
-	tst.l	(a0)+
-	bne	hunkerror
-	lea	nhunks(pc),a1
-	move.l	(a0)+,(a1)		* take number of hunks
-	* we could clear upper word of number of hunks, because original
-	* implementation only uses 16 bits. it's an undocumented feature.
-	* however, i'm sporty and want to see a player/custom that abuses
-	* this feature. bring it on. the next cmp command will catch the
-	* error.
-	cmp.l	#100,(a1)
-	bhi	hunkerror
-	addq.l	#8,a0			* skip hunk load infos
-
-	lea	hunks(pc),a1
-	lea	chippoint(pc),a2
-	move.l	nhunks(pc),d7
-	subq	#1,d7
-hunkcheckloop	move.l	(a0)+,d1
-	move.l	d1,d2
-	andi.l	#$3fffffff,d1
-	lsl.l	#2,d1
-	move.l	d1,(a1)+		* save hunk size (in bytes)
-	* Harry Sintonen pointed out there is a possibility of extra long
-	* memattr here (another long word) if MEMF_CHIP and MEMF_FAST flags
-	* are both set, but i'm not testing for that work-around unless
-	* it really happens with some player/custom we know of.
-	andi.l	#$40000000,d2
-	move.l	d2,(a1)+		* save hunk mem type
-	move.l	(a2),d0			* take relocpoint
-	andi.b	#-8,d0			* align by 8
-	addq.l	#8,d0
-	move.l	d0,(a1)+		* save reloc addr for hunk
-	add.l	d1,d0
-	move.l	d0,(a2)			* put new relocpoint
-	dbf	d7,hunkcheckloop
-
-	lea	hunks(pc),a1
-	move.l	nhunks(pc),d7
-	subq	#1,d7
-	bmi.b	nomorehunks
-
-HunkLoop	push	d7/a1
-HunkLoopTakeNext
-	move.l	(a0)+,d1
-	andi.l	#$ffff,d1
-	cmpi.l	#$000003f1,d1
-	bne.b	NotDebugHunk
-	pushr	a0
-	lea	debughunkwarn(pc),a0
-	bsr	put_string
-	pullr	a0
-	move.l	(a0)+,d0
-	lsl.l	#2,d0
-	add.l	d0,a0
-	bra.b	HunkLoopTakeNext
-NotDebugHunk
-	cmpi.l	#$000003ea,d1
-	beq	DataCodeHunk
-	cmpi.l	#$000003e9,d1
-	beq	DataCodeHunk
-	cmpi.l	#$000003eb,d1
-	beq	BSSHunk
-hunklooperror	pull	d7/a1
-	moveq	#-1,d0
-	rts
-conthunkloop	cmp.l	#$000003f2,(a0)+
-	bne.b	hunklooperror
-	pull	d7/a1
-	add	#12,a1
-	dbf	d7,HunkLoop
-nomorehunks	move.l	hunks+8(pc),a0
-	moveq	#0,d0
-	rts
-hunkerror	moveq	#-1,d0
-	rts
-
-hunksizewarn	dc.b	'hunk size warn',0
-bsshunksizewarn	dc.b	'bss hunk size warn',0
-hunksizeerr	dc.b	'hunk size error',0
-symbolhunkwarn	dc.b	'hunk relocator: symbol hunk warning!',0
-illegalhunkwarn	dc.b	'illegal hunk',0
-debughunkwarn	dc.b	'hunk relocator: debug hunk warning!', 0
-	even
-
-DataCodeHunk	move.l	(a0)+,d0	* take hunk length (in long words)
-	lsl.l	#2,d0
-
-	* copy hunk data
-	pushr	a1
-	move.l	8(a1),a1
-	bsr	memcopy
-	add.l	d0,a0		* skip hunk data
-	pullr	a1
-
-	* if reported hunk size is bigger than copied hunk data,
-	* fill the rest with zeros (piru said this is a must)
-	move.l	(a1),d1
-	sub.l	d0,d1
-	beq.b	no_extra_in_hunk
-	bpl.b	hunk_size_not_fucked_1
-	push	all
-	lea	hunksizeerr(pc),a0
-	bsr	put_string
-	pull	all
-	bra.b	no_extra_in_hunk
-hunk_size_not_fucked_1
-	push	all
-	lea	hunksizewarn(pc),a0
-	bsr	put_string
-	move.l	8(a1),a0		*   destination start address
-	add.l	d0,a0			* + actual data size
-	move.l	d1,d0			* extra size
-	bsr	clearmem
-	pull	all
-no_extra_in_hunk
-
-hunktailloop	cmp.l	#$000003ec,(a0)
-	bne.b	noprogreloc
-	addq.l	#4,a0
-	pushr	a1
-	move.l	8(a1),a1
-	bsr	handlerelochunk
-	pullr	a1
-	bra.b	hunktailloop
-noprogreloc	cmp.l	#$000003f7,(a0)
-	bne.b	noprogreloc_3f7
-	addq.l	#4,a0
-	pushr	a1
-	move.l	8(a1),a1
-	bsr	handlerelochunk_3f7
-	pullr	a1
-	bra.b	hunktailloop
-noprogreloc_3f7	cmp.l	#$000003f0,(a0)
-	bne.b	nosymbolhunk
-	push	all
-	lea	symbolhunkwarn(pc),a0
-	bsr	put_string
-	pull	all
-	addq.l	#4,a0
-symbolhunkloop	move.l	(a0)+,d0
-	beq.b	hunktailloop
-	lsl.l	#2,d0
-	add.l	d0,a0
-	addq.l	#4,a0
-	bra.b	symbolhunkloop
-nosymbolhunk
-	cmp.l	#$000003f1,(a0)
-	bne.b	not_debug_hunk
-	addq.l	#4,a0
-	move.l	(a0)+,d0
-	lsl.l	#2,d0
-	add.l	d0,a0
-	bra.b	hunktailloop
-not_debug_hunk
-	cmp.l	#$000003f2,(a0)
-	beq	conthunkloop
-	move.l	(a0),d0
-	bsr	put_value
-	lea	illegalhunkwarn(pc),a0
-	bsr	put_string
-	illegal
-
-* Clear BSS hunk memory with zeros
-BSSHunk	move.l	(a0)+,d0	* take hunk length (in long words)
-	lsl.l	#2,d0
-	cmp.l	(a1),d0
-	beq.b	r_size_match_2
-	push	all
-	lea	bsshunksizewarn(pc),a0
-	bsr	put_string
-	pull	all
-r_size_match_2	pushr	a0
-	move.l	8(a1),a0	* get hunk address
-	bsr	clearmem
-	pullr	a0
-	bra	conthunkloop
-
-handlerelochunk	move.l	(a0)+,d0	* take number of reloc entries
-	tst.l	d0
-	bne.b	morereloentries
-	rts
-morereloentries	move.l	(a0)+,d1	* take index of associated hunk for
-	lea	hunks(pc),a3	* following reloc entries
-	mulu	#12,d1
-	move.l	8(a3,d1),d2	* take reloced address for hunk
-relochunkloop	move.l	(a0)+,d1	* take reloc entry (offset)
-	add.l	d2,(a1,d1.l)	* add reloc base address
-	subq.l	#1,d0
-	bne.b	relochunkloop
-	bra.b	handlerelochunk
-
-* same as handle reloc hunk but takes 16 bit data word inputs
-handlerelochunk_3f7
-	moveq	#0,d0
-	move	(a0)+,d0	* take number of reloc entries
-	tst.l	d0
-	bne.b	morereloentries_3f7
-	rts
-morereloentries_3f7
-	moveq	#0,d1
-	move	(a0)+,d1	* take index of associated hunk for
-	lea	hunks(pc),a3	* following reloc entries
-	mulu	#12,d1
-	move.l	8(a3,d1),d2	* take reloced address for hunk
-	moveq	#0,d1
-relochunkloop_3f7
-	move	(a0)+,d1	* take reloc entry (offset)
-	add.l	d2,(a1,d1.l)	* add reloc base address
-	subq.l	#1,d0
-	bne.b	relochunkloop_3f7
-	bra.b	handlerelochunk_3f7
-
+	include	relocator.s
 
 exec_allocmem	push	d1-d7/a0-a6
 	lea	chippoint(pc),a0
@@ -2517,6 +2429,7 @@ trapcall	move	d0,sr
 
 dos_library_name	dc.b	'dos.library',0
 uade_library_name	dc.b	'uade.library',0
+icon_library_name	dc.b	'icon.library',0
 	even
 
 exec_old_open_library
@@ -2531,7 +2444,8 @@ exec_open_library
 	lea	dos_lib_base(pc),a0
 	move.l	a0,d0
 	bra.b	return_open_lib
-not_dos_lib	lea	uade_library_name(pc),a0
+not_dos_lib
+	lea	uade_library_name(pc),a0
 	bsr	strcmp
 	tst.l	d0
 	bne.b	not_uade_lib
@@ -2539,7 +2453,16 @@ not_dos_lib	lea	uade_library_name(pc),a0
 	lea	uade_lib_base(pc),a0
 	move.l	a0,d0
 	bra.b	return_open_lib
-not_uade_lib	move.l	a1,a0
+not_uade_lib
+	lea	icon_library_name(pc),a0
+	bsr	strcmp
+	tst.l	d0
+	bne.b	not_icon_lib
+	bsr	send_open_lib_msg
+	lea	icon_lib_base(pc),a0
+	move.l	a0,d0
+	bra.b	return_open_lib
+not_icon_lib	move.l	a1,a0
 	lea	openlibwarnname(pc),a1
 	moveq	#31,d0
 	bsr	strlcpy
@@ -2591,8 +2514,17 @@ intuiwarn	bsr	liboffscheck
 intuiwarnmsg	dc.b	'warning: intuition library function not implemented',0
 	even
 
+iconwarn	bsr	liboffscheck
+	push	all
+	lea	iconwarnmsg(pc),a0
+	bsr	put_string
+	pull	all
+	rts
+iconwarnmsg	dc.b	'warning: icon.library function not implemented',0
+	even
+
 * a0 base, a1 warn funct, d0 = abs(minimum offset)
-exec_initlibbase
+init_lib_base
 	push	all
 	move.l	d0,d6
 	moveq	#6,d0
@@ -3742,5 +3674,9 @@ uade_lib_base
 	dcb.b	$400,0
 intuition_lib_base
 	dcb.b	$200,0
+
+* icon.library
+	dcb.b	108,0		* LVO table: see vectors in icon_lib.i
+icon_lib_base
 
 end
