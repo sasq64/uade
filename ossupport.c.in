@@ -1,4 +1,5 @@
 #include <uade/ossupport.h>
 @SUPPORT_C_CONTENTS@
 @STRLREP_C_CONTENTS@
+@CANON_C_CONTENTS@
 @MEMMEM_C_CONTENTS@

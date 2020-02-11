@@ -1,9 +1,13 @@
 cmake_minimum_required(VERSION 3.5)
 project(uade)
 
+include_directories(SYSTEM /usr/local/include)
+link_directories(/usr/local/lib)
+
 # Configure ossupport
 
 try_compile(HAVE_STRLREP ${CMAKE_BINARY_DIR} SOURCES ${CMAKE_SOURCE_DIR}/compat/strltest.c)
+try_compile(HAVE_CANON ${CMAKE_BINARY_DIR} SOURCES ${CMAKE_SOURCE_DIR}/compat/canontest.c)
 try_compile(HAVE_MEMMEM ${CMAKE_BINARY_DIR} SOURCES ${CMAKE_SOURCE_DIR}/compat/memmemtest.c)
 try_compile(HAVE_UNLIKELY ${CMAKE_BINARY_DIR} SOURCES ${CMAKE_SOURCE_DIR}/compat/unlikelytest.c)
 
@@ -13,6 +17,11 @@ file(READ src/frontends/common/unixsupport.c SUPPORT_C_CONTENTS)
 if(NOT ${HAVE_STRLREP})
     file(READ compat/strlrep.c STRLREP_C_CONTENTS)
     file(READ compat/strlrep.h STRLREP_H_CONTENTS)
+endif()
+
+if(NOT ${HAVE_CANON})
+    file(READ compat/canonrep.c CANON_C_CONTENTS)
+    file(READ compat/canonrep.h CANON_H_CONTENTS)
 endif()
 
 if(NOT ${HAVE_MEMMEM})
@@ -106,7 +115,7 @@ add_executable(uadecore
     ${CMAKE_CURRENT_BINARY_DIR}/cpuemu.c
     ${CMAKE_CURRENT_BINARY_DIR}/cpudefs.c
     ${CMAKE_CURRENT_BINARY_DIR}/cpustbl.c)
-target_link_libraries(uadecore PRIVATE m) 
+target_link_libraries(uadecore PRIVATE m)
 target_compile_definitions(uadecore PRIVATE -DPART_1 -DPART_2 -DPART_3 -DPART_4 -DPART_5 -DPART_6 -DPART_7 -DPART_8)
 target_compile_options(uadecore PRIVATE -Wno-format -Wno-implicit-function-declaration)
 target_include_directories(uadecore PUBLIC
@@ -126,7 +135,7 @@ target_include_directories(uade PUBLIC
 )
 
 add_executable(uade123
-    src/frontends/uade123/audio.c   
+    src/frontends/uade123/audio.c
     src/frontends/uade123/playloop.c
     src/frontends/uade123/chrarray.c
     src/frontends/uade123/terminal.c
@@ -134,4 +143,4 @@ add_executable(uade123
     src/frontends/uade123/uade123.c
     src/frontends/common/unixwalkdir.c
 )
-target_link_libraries(uade123 PRIVATE uade m ao) 
+target_link_libraries(uade123 PRIVATE uade m ao)
