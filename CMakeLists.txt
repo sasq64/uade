@@ -7,18 +7,21 @@ try_compile(HAVE_STRLREP ${CMAKE_BINARY_DIR} SOURCES ${CMAKE_SOURCE_DIR}/compat/
 try_compile(HAVE_MEMMEM ${CMAKE_BINARY_DIR} SOURCES ${CMAKE_SOURCE_DIR}/compat/memmemtest.c)
 try_compile(HAVE_UNLIKELY ${CMAKE_BINARY_DIR} SOURCES ${CMAKE_SOURCE_DIR}/compat/unlikelytest.c)
 
-configure_file(ossupport.h.in uade/ossupport.h)
-configure_file(ossupport.c.in ossupport.c)
-
-set(OSSUPPORT ${CMAKE_BINARY_DIR}/ossupport.c)
+set(SUPPORT_INCLUDE "#include <uade/unixsupport.h>")
+file(READ src/frontends/common/unixsupport.c SUPPORT_C_CONTENTS)
 
 if(NOT ${HAVE_STRLREP})
-    set(OSSUPPORT ${OSSUPPORT} compat/strlrep.c)
+    file(READ compat/strlrep.c STRLREP_C_CONTENTS)
+    file(READ compat/strlrep.h STRLREP_H_CONTENTS)
 endif()
 
 if(NOT ${HAVE_MEMMEM})
-    set(OSSUPPORT ${OSSUPPORT} compat/memmemrep.c)
+    file(READ compat/memmemrep.c MEMMEM_C_CONTENTS)
+    file(READ compat/memmemrep.h MEMMEM_H_CONTENTS)
 endif()
+
+configure_file(ossupport.h.in uade/ossupport.h)
+configure_file(ossupport.c.in ossupport.c)
 
 # Configure options
 
@@ -51,7 +54,7 @@ set(UADE_SOURCES
     src/frontends/common/vparray.c
     src/frontends/common/support.c
     src/frontends/common/fifo.c
-    ${OSSUPPORT}
+    ${CMAKE_BINARY_DIR}/ossupport.c
     bencode/bencode.c)
 
 set(UADECORE_SOURCES
@@ -76,46 +79,48 @@ set(UADECORE_SOURCES
     src/frontends/common/uadeutils.c
     src/frontends/common/uadeipc.c
     src/frontends/common/unixatomic.c
-    ${OSSUPPORT}
-)
+    ${CMAKE_BINARY_DIR}/ossupport.c)
 
 add_executable(build68k src/build68k.c)
 target_include_directories(build68k PRIVATE src src/include)
 add_executable(gencpu src/gencpu.c src/readcpu.c ${CMAKE_CURRENT_BINARY_DIR}/cpudefs.c src/missing.c)
 target_include_directories(gencpu PRIVATE src src/include)
 
-add_custom_command(OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/cpudefs.c
+add_custom_command(
+    OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/cpudefs.c
     COMMAND build68k < ${CMAKE_CURRENT_SOURCE_DIR}/src/table68k > ${CMAKE_CURRENT_BINARY_DIR}/cpudefs.c
     DEPENDS $<TARGET_FILE:build68k>
     COMMENT "Running build68k")
 
-add_custom_command(OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/cpuemu.c ${CMAKE_CURRENT_BINARY_DIR}/cputbl.h ${CMAKE_CURRENT_BINARY_DIR}/cpustbl.c
+add_custom_command(
+    OUTPUT
+        ${CMAKE_CURRENT_BINARY_DIR}/cpuemu.c
+        ${CMAKE_CURRENT_BINARY_DIR}/cputbl.h
+        ${CMAKE_CURRENT_BINARY_DIR}/cpustbl.c
     COMMAND gencpu
     DEPENDS $<TARGET_FILE:gencpu>
     COMMENT "Running gencpu")
 
-add_executable(uadecore ${UADECORE_SOURCES} ${CMAKE_CURRENT_BINARY_DIR}/cpuemu.c ${CMAKE_CURRENT_BINARY_DIR}/cpudefs.c ${CMAKE_CURRENT_BINARY_DIR}/cpustbl.c)
+add_executable(uadecore
+    ${UADECORE_SOURCES}
+    ${CMAKE_CURRENT_BINARY_DIR}/cpuemu.c
+    ${CMAKE_CURRENT_BINARY_DIR}/cpudefs.c
+    ${CMAKE_CURRENT_BINARY_DIR}/cpustbl.c)
 target_link_libraries(uadecore PRIVATE m) 
 target_compile_definitions(uadecore PRIVATE -DPART_1 -DPART_2 -DPART_3 -DPART_4 -DPART_5 -DPART_6 -DPART_7 -DPART_8)
 target_compile_options(uadecore PRIVATE -Wno-format -Wno-implicit-function-declaration)
 target_include_directories(uadecore PUBLIC
     ${CMAKE_CURRENT_BINARY_DIR}
-    bencode/include
     src/
     src/include/
     src/frontends/include/
-    src/frontends/common/
 )
 
-
-add_library(uade OBJECT ${UADE_SOURCES})
-target_compile_definitions(uade PRIVATE -DPART_1 -DPART_2 -DPART_3 -DPART_4 -DPART_5 -DPART_6 -DPART_7 -DPART_8)
+add_library(uade STATIC ${UADE_SOURCES})
 target_compile_options(uade PRIVATE -Wno-format -Wno-implicit-function-declaration)
 target_include_directories(uade PUBLIC
     ${CMAKE_CURRENT_BINARY_DIR}
     bencode/include
-    src/
-    src/include/
     src/frontends/include/
     src/frontends/common/
 )

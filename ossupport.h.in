@@ -1,1 +1,3 @@
-#include <uade/unixsupport.h>
+@SUPPORT_INCLUDE@
+@STRLREP_H_CONTENTS@
+@MEMMEM_H_CONTENTS@

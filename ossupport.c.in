@@ -1,2 +1,4 @@
-#include "uade/unixsupport.h"
-#include "unixsupport.c"
+#include <uade/ossupport.h>
+@SUPPORT_C_CONTENTS@
+@STRLREP_C_CONTENTS@
+@MEMMEM_C_CONTENTS@
