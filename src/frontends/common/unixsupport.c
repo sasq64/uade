@@ -5,6 +5,7 @@
    This module is licensed under the GNU LGPL.
 */
 
+#include <uade/unixsupport.h>
 #include <uade/uadeipc.h>
 #include <uade/unixatomic.h>
 
@@ -198,6 +199,8 @@ int uade_find_amiga_file(char *realname, size_t maxlen, const char *aname,
 	return 0;
 }
 
+#ifdef USE_UADECORE
+
 void uade_arch_kill_and_wait_uadecore(struct uade_ipc *ipc, pid_t *uadepid)
 {
 	if (*uadepid == 0)
@@ -220,6 +223,12 @@ int uade_arch_spawn(struct uade_ipc *ipc, pid_t *uadepid, const char *uadename)
 {
 	int fds[2];
 	char input[32], output[32];
+
+	/* TODO: Remove this, but make uadecore respond with a HELLO message. */
+	if (access(uadename, X_OK)) {
+		uade_warning("Could not execute %s\n", uadename);
+		return -1;
+	}
 
 	if (socketpair(AF_UNIX, SOCK_STREAM, 0, fds)) {
 		uade_warning("Can not create socketpair: %s\n",
@@ -279,3 +288,48 @@ int uade_arch_spawn(struct uade_ipc *ipc, pid_t *uadepid, const char *uadename)
 	uade_set_peer(ipc, 1, fds[0], fds[0]);
 	return 0;
 }
+
+#else
+
+#include <pthread.h>
+static int spawn_fds[2];
+static pthread_t uadecore_thread;
+int dumb_socketpair(int socks[2], int make_overlapped);
+int uadecore_main (int argc, char **argv);
+
+void uade_arch_kill_and_wait_uadecore(struct uade_ipc *ipc, pid_t *uadepid)
+{
+    uade_atomic_close(ipc->in_fd);
+    uade_atomic_close(ipc->out_fd);
+
+    pthread_join(uadecore_thread, NULL);
+}
+
+static void* thread_func(void *data)
+{
+    int *fds = (int*)data;
+    char input[32], output[32];
+
+    /* give in/out fds as command line parameters to uadecore */
+    snprintf(input, sizeof input, "%d", fds[1]);
+    snprintf(output, sizeof output, "%d", fds[1]);
+
+    char *args[] = { "uadecore", "-i", input, "-o", output };
+    uadecore_main(5, args);
+    return NULL;
+}
+
+int uade_arch_spawn(struct uade_ipc *ipc, pid_t *uadepid, const char *uadename)
+{
+    if (dumb_socketpair(spawn_fds, 0)) {
+        uade_warning("Can not create socketpair: %s\n",
+                     strerror(errno));
+        return -1;
+    }
+
+    pthread_create(&uadecore_thread, NULL, thread_func, (void*)spawn_fds);
+    uade_set_peer(ipc, 1, spawn_fds[0], spawn_fds[0]);
+    return 0;
+}
+
+#endif

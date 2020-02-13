@@ -1,6 +1,8 @@
 cmake_minimum_required(VERSION 3.5)
 project(uade)
 
+option(USE_UADECORE "Build uadeore executable" OFF)
+
 # OSX does not have these by default
 include_directories(SYSTEM /usr/local/include)
 link_directories(/usr/local/lib)
@@ -13,25 +15,26 @@ try_compile(HAVE_MEMMEM ${CMAKE_BINARY_DIR} SOURCES ${CMAKE_SOURCE_DIR}/compat/m
 try_compile(HAVE_UNLIKELY ${CMAKE_BINARY_DIR} SOURCES ${CMAKE_SOURCE_DIR}/compat/unlikelytest.c)
 
 set(SUPPORT_INCLUDE "#include <uade/unixsupport.h>")
-file(READ src/frontends/common/unixsupport.c SUPPORT_C_CONTENTS)
+
+set(SUPPORT_SOURCES ${SUPPORT_SOURCES} src/frontends/common/unixsupport.c)
+
 
 if(NOT ${HAVE_STRLREP})
-    file(READ compat/strlrep.c STRLREP_C_CONTENTS)
+    set(SUPPORT_SOURCES ${SUPPORT_SOURCES} compat/strlrep.c)
     file(READ compat/strlrep.h STRLREP_H_CONTENTS)
 endif()
 
 if(NOT ${HAVE_CANON})
-    file(READ compat/canonrep.c CANON_C_CONTENTS)
+    set(SUPPORT_SOURCES ${SUPPORT_SOURCES} compat/canonrep.c)
     file(READ compat/canonrep.h CANON_H_CONTENTS)
 endif()
 
 if(NOT ${HAVE_MEMMEM})
-    file(READ compat/memmemrep.c MEMMEM_C_CONTENTS)
+    set(SUPPORT_SOURCES ${SUPPORT_SOURCES} compat/memmemrep.c)
     file(READ compat/memmemrep.h MEMMEM_H_CONTENTS)
 endif()
 
 configure_file(ossupport.h.in uade/ossupport.h)
-configure_file(ossupport.c.in ossupport.c)
 
 # Configure options
 
@@ -46,7 +49,6 @@ configure_file(options.h.in uade/options.h)
 configure_file(compilersupport.h.in uade/compilersupport.h)
 configure_file(sysincludes.h.in uade/sysincludes.h)
 configure_file(src/sd-sound-generic.h sd-sound.h)
-configure_file(src/sd-sound-generic.c sd-sound.c)
 
 set(UADE_SOURCES
     src/frontends/common/unixatomic.c
@@ -65,7 +67,7 @@ set(UADE_SOURCES
     src/frontends/common/vparray.c
     src/frontends/common/support.c
     src/frontends/common/fifo.c
-    ${CMAKE_BINARY_DIR}/ossupport.c
+    ${SUPPORT_SOURCES}
     bencode/bencode.c)
 
 set(UADECORE_SOURCES
@@ -76,7 +78,7 @@ set(UADECORE_SOURCES
     src/audio.c
     src/compiler.c
     src/missing.c
-    ${CMAKE_BINARY_DIR}/sd-sound.c
+    src/sd-sound-generic.c
     src/md-support.c
     src/cfgfile.c
     src/fpp.c
@@ -86,11 +88,10 @@ set(UADECORE_SOURCES
     src/uademain.c
     src/sinctable.c
     src/text_scope.c
-    src/main.c
     src/frontends/common/uadeutils.c
     src/frontends/common/uadeipc.c
     src/frontends/common/unixatomic.c
-    ${CMAKE_BINARY_DIR}/ossupport.c)
+    ${SUPPORT_SOURCES})
 
 add_executable(build68k src/build68k.c)
 target_include_directories(build68k PRIVATE src src/include)
@@ -112,30 +113,37 @@ add_custom_command(
     DEPENDS $<TARGET_FILE:gencpu>
     COMMENT "Running gencpu")
 
-add_executable(uadecore
+add_library(uadecorelib STATIC
     ${UADECORE_SOURCES}
     ${CMAKE_CURRENT_BINARY_DIR}/cpuemu.c
     ${CMAKE_CURRENT_BINARY_DIR}/cpudefs.c
     ${CMAKE_CURRENT_BINARY_DIR}/cpustbl.c)
-target_link_libraries(uadecore PRIVATE m)
-target_compile_definitions(uadecore PRIVATE -DPART_1 -DPART_2 -DPART_3 -DPART_4 -DPART_5 -DPART_6 -DPART_7 -DPART_8)
-target_compile_options(uadecore PRIVATE -Wno-format -Wno-implicit-function-declaration)
-target_include_directories(uadecore PUBLIC
+target_link_libraries(uadecorelib PRIVATE m)
+target_compile_options(uadecorelib PRIVATE -Wno-format -Wno-implicit-function-declaration)
+target_include_directories(uadecorelib PUBLIC
     ${CMAKE_CURRENT_BINARY_DIR}
     src
     src/include
     src/frontends/include
 )
 
-add_library(uade STATIC ${UADE_SOURCES})
+add_library(uade STATIC ${UADE_SOURCES} compat/socketpair.c)
 target_compile_options(uade PRIVATE -Wno-format -Wno-implicit-function-declaration)
-target_link_libraries(uade PUBLIC m)
+target_link_libraries(uade PUBLIC m pthread)
 target_include_directories(uade PUBLIC
-    ${CMAKE_CURRENT_BINARY_DIR}
-    bencode/include
-    src/frontends/include
-    src/frontends/common
-)
+        ${CMAKE_CURRENT_BINARY_DIR}
+        bencode/include
+        src/frontends/include
+        src/frontends/common)
+
+if(USE_UADECORE)
+    add_executable(uadecore src/main.c)
+    target_link_libraries(uadecore PRIVATE uadecorelib)
+    target_compile_definitions(uade PRIVATE USE_UADECORE)
+else()
+    target_link_libraries(uade PUBLIC uadecorelib pthread)
+endif()
+
 
 add_executable(uade123
     src/frontends/uade123/audio.c
