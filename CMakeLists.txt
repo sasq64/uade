@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.5)
 project(uade)
 
-option(USE_UADECORE "Build uadeore executable" OFF)
+option(USE_UADECORE "Build and use uadecore forked playback" OFF)
 
 # OSX does not have these by default
 include_directories(SYSTEM /usr/local/include)
@@ -137,25 +137,26 @@ target_include_directories(uade PUBLIC
 if(USE_UADECORE)
     add_executable(uadecore src/main.c)
     target_link_libraries(uadecore PRIVATE corelib)
-    target_compile_definitions(uade PRIVATE USE_UADECORE)
 else()
     target_link_libraries(uade PUBLIC corelib pthread)
+    target_compile_definitions(uade PRIVATE NO_UADECORE)
 endif()
 
+if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
+    add_executable(uade123
+        src/frontends/uade123/audio.c
+        src/frontends/uade123/playloop.c
+        src/frontends/uade123/chrarray.c
+        src/frontends/uade123/terminal.c
+        src/frontends/uade123/playlist.c
+        src/frontends/uade123/uade123.c
+        src/frontends/common/unixwalkdir.c
+    )
+    target_link_libraries(uade123 PRIVATE uade ao)
 
-add_executable(uade123
-    src/frontends/uade123/audio.c
-    src/frontends/uade123/playloop.c
-    src/frontends/uade123/chrarray.c
-    src/frontends/uade123/terminal.c
-    src/frontends/uade123/playlist.c
-    src/frontends/uade123/uade123.c
-    src/frontends/common/unixwalkdir.c
-)
-target_link_libraries(uade123 PRIVATE uade ao)
-
-add_executable(uadesimple
-    src/frontends/uadesimple/audio.c
-    src/frontends/uadesimple/uadesimple.c
-)
-target_link_libraries(uadesimple PRIVATE uade ao)
+    add_executable(uadesimple
+        src/frontends/uadesimple/audio.c
+        src/frontends/uadesimple/uadesimple.c
+    )
+    target_link_libraries(uadesimple PRIVATE uade ao)
+endif()

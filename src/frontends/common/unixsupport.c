@@ -199,7 +199,7 @@ int uade_find_amiga_file(char *realname, size_t maxlen, const char *aname,
 	return 0;
 }
 
-#ifdef USE_UADECORE
+#ifndef NO_UADECORE
 
 void uade_arch_kill_and_wait_uadecore(struct uade_ipc *ipc, pid_t *uadepid)
 {
