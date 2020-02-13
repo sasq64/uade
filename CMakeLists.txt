@@ -9,10 +9,10 @@ link_directories(/usr/local/lib)
 
 # Configure ossupport
 
-try_compile(HAVE_STRLREP ${CMAKE_BINARY_DIR} SOURCES ${CMAKE_SOURCE_DIR}/compat/strltest.c)
-try_compile(HAVE_CANON ${CMAKE_BINARY_DIR} SOURCES ${CMAKE_SOURCE_DIR}/compat/canontest.c)
-try_compile(HAVE_MEMMEM ${CMAKE_BINARY_DIR} SOURCES ${CMAKE_SOURCE_DIR}/compat/memmemtest.c)
-try_compile(HAVE_UNLIKELY ${CMAKE_BINARY_DIR} SOURCES ${CMAKE_SOURCE_DIR}/compat/unlikelytest.c)
+try_compile(HAVE_STRLREP ${CMAKE_BINARY_DIR} SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/compat/strltest.c)
+try_compile(HAVE_CANON ${CMAKE_BINARY_DIR} SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/compat/canontest.c)
+try_compile(HAVE_MEMMEM ${CMAKE_BINARY_DIR} SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/compat/memmemtest.c)
+try_compile(HAVE_UNLIKELY ${CMAKE_BINARY_DIR} SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/compat/unlikelytest.c)
 
 set(SUPPORT_INCLUDE "#include <uade/unixsupport.h>")
 set(SUPPORT_SOURCES ${SUPPORT_SOURCES} src/frontends/common/unixsupport.c)
