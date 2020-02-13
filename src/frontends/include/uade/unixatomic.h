@@ -2,7 +2,8 @@
 #define _UADE_UNIXATOMIC_H_
 
 #include <stdio.h>
-#include <unistd.h>
+//#include <unistd.h>
+#include <sysdeps.h>
 
 int uade_atomic_close(int fd);
 int uade_atomic_dup2(int oldfd, int newfd);

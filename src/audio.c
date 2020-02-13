@@ -7,7 +7,7 @@
   * Copyright 2005 Heikki Orsila
   * Copyright 2005 Antti S. Lankila
   */
-
+#define _USE_MATH_DEFINES
 #include <math.h>
 
 #include "sysdeps.h"

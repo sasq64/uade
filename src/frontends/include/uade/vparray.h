@@ -3,7 +3,8 @@
 
 #include <stdlib.h>
 #include <assert.h>
-#include <unistd.h>
+//#include <unistd.h>
+#include <sysdeps.h>
 
 struct vparray {
 	size_t head;

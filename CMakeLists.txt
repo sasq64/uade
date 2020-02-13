@@ -7,6 +7,20 @@ option(USE_UADECORE "Build and use uadecore forked playback" OFF)
 include_directories(SYSTEM /usr/local/include)
 link_directories(/usr/local/lib)
 
+# Set up warnings
+
+set(GCC_CLANG_WARNINGS -Wno-format -Wno-implicit-function-declaration)
+
+if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
+  set(WARNINGS ${WARNINGS} ${GCC_WARNINGS} ${GCC_CLANG_WARNINGS})
+elseif(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+  set(WARNINGS ${WARNINGS} ${CLANG_WARNINGS} ${GCC_CLANG_WARNINGS})
+elseif("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC")
+  set(WARNINGS ${WARNINGS} ${MSVC_WARNINGS})
+endif()
+add_library(Warnings INTERFACE)
+target_compile_options(Warnings INTERFACE ${WARNINGS})
+
 # Configure ossupport
 
 try_compile(HAVE_STRLREP ${CMAKE_BINARY_DIR} SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/compat/strltest.c)
@@ -116,20 +130,20 @@ add_library(corelib STATIC
     ${CMAKE_CURRENT_BINARY_DIR}/cpuemu.c
     ${CMAKE_CURRENT_BINARY_DIR}/cpudefs.c
     ${CMAKE_CURRENT_BINARY_DIR}/cpustbl.c)
-target_link_libraries(corelib PRIVATE m)
-target_compile_options(corelib PRIVATE -Wno-format -Wno-implicit-function-declaration)
+target_link_libraries(corelib PRIVATE Warnings m)
 target_include_directories(corelib PUBLIC
     ${CMAKE_CURRENT_BINARY_DIR}
+	compat
     src
     src/include
     src/frontends/include
 )
 
 add_library(uade STATIC ${UADE_SOURCES} compat/socketpair.c)
-target_compile_options(uade PRIVATE -Wno-format -Wno-implicit-function-declaration)
-target_link_libraries(uade PUBLIC m pthread)
+target_link_libraries(uade PUBLIC Warnings m pthread)
 target_include_directories(uade PUBLIC
-        ${CMAKE_CURRENT_BINARY_DIR}
+		compat
+        ${CMAKE_CURRENT_SOURCE_DIR}
         bencode/include
         src/frontends/include
         src/frontends/common)
@@ -140,6 +154,7 @@ if(USE_UADECORE)
 else()
     target_link_libraries(uade PUBLIC corelib pthread)
     target_compile_definitions(uade PRIVATE NO_UADECORE)
+    target_compile_definitions(corelib PRIVATE NO_UADECORE)
 endif()
 
 if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)

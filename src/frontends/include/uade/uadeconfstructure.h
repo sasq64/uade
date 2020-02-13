@@ -3,6 +3,7 @@
 
 #include <limits.h>
 #include <stddef.h>
+#include <sysdeps.h>
 
 struct uade_path {
 	char name[PATH_MAX];

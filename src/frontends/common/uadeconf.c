@@ -25,10 +25,9 @@
 #include <string.h>
 #include <assert.h>
 #include <limits.h>
-#include <unistd.h>
 #include <sys/stat.h>
 #include <sys/types.h>
-#include <unistd.h>
+//#include <unistd.h>
 
 static int uade_set_silence_timeout(struct uade_config *uc, const char *value);
 static int uade_set_subsong_timeout(struct uade_config *uc, const char *value);

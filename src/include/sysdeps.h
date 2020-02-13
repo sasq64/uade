@@ -24,36 +24,49 @@
 #include <limits.h>
 #include <stdint.h>
 
-#ifndef __STDC__
-#error "Your compiler is not ANSI. Get a real one."
-#endif
-
-#define HAVE_GETTIMEOFDAY 1
-#define HAVE_SIGACTION 1
+// #define HAVE_GETTIMEOFDAY 1
+//#define HAVE_SIGACTION 1
 #define HAVE_VFPRINTF 1
 #define HAVE_STRDUP 1
 
-#include <stdarg.h>
 
-#include <sys/types.h>
-
-#include <values.h>
-
+#ifndef _WIN32
 #include <strings.h>
-#include <string.h>
-
 #include <unistd.h>
-#include <fcntl.h>
-
 #include <utime.h>
-
-#include <sys/stat.h>
-
+#include <dirent.h>
 #include <sys/time.h>
+
+#else
+
+#include <winsock2.h>
+#include <dirent_win32.h>
+
+#define X_OK 1
+
+#ifndef PATH_MAX
+#define PATH_MAX 4096
+#endif
+
+typedef long long ssize_t;
+typedef int pid_t;
+
+#endif
+
+#ifdef _MSC_VER
+#define UADE_PACK( __Declaration__ ) __pragma( pack(push, 1) ) __Declaration__ __pragma( pack(pop) )
+#else
+#define UADE_PACK( __Declaration__ ) __Declaration__ __attribute__((__packed__))
+#endif
+
+#include <fcntl.h>
+#include <sys/stat.h>
 #include <time.h>
 
-# include <dirent.h>
 
+#include <stdarg.h>
+#include <sys/types.h>
+#include <string.h>
 //# include <sys/utime.h>
 
 #include <errno.h>
@@ -279,8 +292,5 @@ extern void mallocemu_free (void *ptr);
    it.  */
 #define CYCLE_UNIT 512
 
-/* MODIF PMO */
-#endif
-
-/* ENDOF MODIF PMO */
+#endif // header guard
 

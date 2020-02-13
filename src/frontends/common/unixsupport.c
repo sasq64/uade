@@ -11,21 +11,22 @@
 
 #include <assert.h>
 #include <ctype.h>
-#include <dirent.h>
 #include <errno.h>
 #include <fcntl.h>
-#include <libgen.h>
 #include <limits.h>
 #include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
-#include <sys/socket.h>
 #include <sys/stat.h>
 #include <sys/types.h>
-#include <sys/wait.h>
-#include <unistd.h>
+
+//#include <sys/socket.h>
+//#include <libgen.h>
+//#include <dirent.h>
+//#include <sys/wait.h>
+//#include <unistd.h>
 
 int uade_filesize(size_t *size, const char *pathname)
 {
@@ -77,12 +78,17 @@ static int uade_amiga_scandir(char *real, char *dirname, char *fake, int ml)
 
 char *uade_dirname(char *dst, char *src, size_t maxlen)
 {
-	char *srctemp = strdup(src);
-	if (srctemp == NULL)
-		return NULL;
-	strlcpy(dst, dirname(srctemp), maxlen);
-	free(srctemp);
-	return dst;
+    char* ptr = src + strlen(src) - 1;
+    while (ptr > src && *ptr != '/' && *ptr != '\\')
+        ptr--;
+    if (ptr == src) {
+        *dst = '.';
+        dst[1] = 0;
+    } else {
+        memcpy(dst, src, ptr - src);
+        dst[ptr - src] = 0;
+    }
+    return dst;
 }
 
 
@@ -302,7 +308,7 @@ void uade_arch_kill_and_wait_uadecore(struct uade_ipc *ipc, pid_t *uadepid)
     uade_atomic_close(ipc->in_fd);
     uade_atomic_close(ipc->out_fd);
 
-    pthread_join(uadecore_thread, NULL);
+   pthread_join(uadecore_thread, NULL);
 }
 
 static void* thread_func(void *data)

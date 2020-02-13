@@ -12,7 +12,7 @@
 #include "options.h"
 #include "readcpu.h"
 
-int nr_cpuop_funcs;
+int nr_cpuop_funcs = 0;
 
 struct mnemolookup lookuptab[] = {
     { i_ILLG, "ILLEGAL" },

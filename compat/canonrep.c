@@ -1,5 +1,6 @@
 #include <limits.h>
 #include <stdlib.h>
+#include <sysdeps.h>
 
 char *canonicalize_file_name(const char *path)
 {

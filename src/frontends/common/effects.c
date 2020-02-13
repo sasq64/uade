@@ -13,6 +13,7 @@
 #include <stdio.h>
 #include <assert.h>
 #include <string.h>
+#define _USE_MATH_DEFINES
 #include <math.h>
 
 /*** old headphone effect ***/
