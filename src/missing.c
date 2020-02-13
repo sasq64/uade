@@ -6,7 +6,6 @@
   * Copyright 1997 Bernd Schmidt
   */
 
-#include "sysconfig.h"
 #include "sysdeps.h"
 
 #include "options.h"

@@ -16,7 +16,6 @@
  * Copyright 1995, 1996 Bernd Schmidt
  */
 
-#include "sysconfig.h"
 #include "sysdeps.h"
 #include <ctype.h>
 
@@ -2308,7 +2307,6 @@ static void gen_opcode (unsigned long int opcode)
 
 static void generate_includes (FILE * f)
 {
-    fprintf (f, "#include \"sysconfig.h\"\n");
     fprintf (f, "#include \"sysdeps.h\"\n");
     fprintf (f, "#include \"options.h\"\n");
     fprintf (f, "#include \"memory.h\"\n");

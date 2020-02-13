@@ -7,7 +7,6 @@
   * Copyright 1995, 1996, 1997 Bernd Schmidt
   */
 
-#include "sysconfig.h"
 #include "sysdeps.h"
 #include <assert.h>
 #include <signal.h>

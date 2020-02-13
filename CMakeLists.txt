@@ -15,9 +15,7 @@ try_compile(HAVE_MEMMEM ${CMAKE_BINARY_DIR} SOURCES ${CMAKE_SOURCE_DIR}/compat/m
 try_compile(HAVE_UNLIKELY ${CMAKE_BINARY_DIR} SOURCES ${CMAKE_SOURCE_DIR}/compat/unlikelytest.c)
 
 set(SUPPORT_INCLUDE "#include <uade/unixsupport.h>")
-
 set(SUPPORT_SOURCES ${SUPPORT_SOURCES} src/frontends/common/unixsupport.c)
-
 
 if(NOT ${HAVE_STRLREP})
     set(SUPPORT_SOURCES ${SUPPORT_SOURCES} compat/strlrep.c)
@@ -113,14 +111,14 @@ add_custom_command(
     DEPENDS $<TARGET_FILE:gencpu>
     COMMENT "Running gencpu")
 
-add_library(uadecorelib STATIC
+add_library(corelib STATIC
     ${UADECORE_SOURCES}
     ${CMAKE_CURRENT_BINARY_DIR}/cpuemu.c
     ${CMAKE_CURRENT_BINARY_DIR}/cpudefs.c
     ${CMAKE_CURRENT_BINARY_DIR}/cpustbl.c)
-target_link_libraries(uadecorelib PRIVATE m)
-target_compile_options(uadecorelib PRIVATE -Wno-format -Wno-implicit-function-declaration)
-target_include_directories(uadecorelib PUBLIC
+target_link_libraries(corelib PRIVATE m)
+target_compile_options(corelib PRIVATE -Wno-format -Wno-implicit-function-declaration)
+target_include_directories(corelib PUBLIC
     ${CMAKE_CURRENT_BINARY_DIR}
     src
     src/include
@@ -138,10 +136,10 @@ target_include_directories(uade PUBLIC
 
 if(USE_UADECORE)
     add_executable(uadecore src/main.c)
-    target_link_libraries(uadecore PRIVATE uadecorelib)
+    target_link_libraries(uadecore PRIVATE corelib)
     target_compile_definitions(uade PRIVATE USE_UADECORE)
 else()
-    target_link_libraries(uade PUBLIC uadecorelib pthread)
+    target_link_libraries(uade PUBLIC corelib pthread)
 endif()
 
 

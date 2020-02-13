@@ -6,7 +6,6 @@
   * (c) 1995 Bernd Schmidt
   */
 
-#include "sysconfig.h"
 #include "sysdeps.h"
 
 #include "options.h"

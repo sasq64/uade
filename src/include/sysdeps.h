@@ -22,72 +22,39 @@
 #include <errno.h>
 #include <assert.h>
 #include <limits.h>
+#include <stdint.h>
 
 #ifndef __STDC__
 #error "Your compiler is not ANSI. Get a real one."
 #endif
 
+#define HAVE_GETTIMEOFDAY 1
+#define HAVE_SIGACTION 1
+#define HAVE_VFPRINTF 1
+#define HAVE_STRDUP 1
+
 #include <stdarg.h>
 
-#ifdef HAVE_SYS_TYPES_H
 #include <sys/types.h>
-#endif
 
-#ifdef HAVE_VALUES_H
 #include <values.h>
-#endif
 
-#ifdef HAVE_STRINGS_H
 #include <strings.h>
-#endif
-#ifdef HAVE_STRING_H
 #include <string.h>
-#endif
 
-#ifdef HAVE_UNISTD_H
 #include <unistd.h>
-#endif
-#ifdef HAVE_FCNTL_H
 #include <fcntl.h>
-#endif
 
-#ifdef HAVE_UTIME_H
 #include <utime.h>
-#endif
 
-#ifdef HAVE_SYS_STAT_H
 #include <sys/stat.h>
-#endif
 
-#if TIME_WITH_SYS_TIME
-# include <sys/time.h>
-# include <time.h>
-#else
-# if HAVE_SYS_TIME_H
-#  include <sys/time.h>
-# else
-#  include <time.h>
-# endif
-#endif
+#include <sys/time.h>
+#include <time.h>
 
-#if HAVE_DIRENT_H
 # include <dirent.h>
-#else
-#   define dirent direct
-#   if HAVE_SYS_NDIR_H
-#    include <sys/ndir.h>
-#   endif
-#   if HAVE_SYS_DIR_H
-#    include <sys/dir.h>
-#   endif
-#   if HAVE_NDIR_H
-#    include <ndir.h>
-#   endif
-#endif
 
-#ifdef HAVE_SYS_UTIME_H
-# include <sys/utime.h>
-#endif
+//# include <sys/utime.h>
 
 #include <errno.h>
 #include <assert.h>
@@ -117,12 +84,12 @@ struct utimbuf
 
 /* MODIF PMO */
 /* WIN32/UNIX compatibility */
-#ifdef WINDOWS_VCPP  
+#ifdef WINDOWS_VCPP
   #define COMP_SEPARATOR   '\\'
   #define COMP_S_SEPARATOR "\\"
 #else
   #define COMP_SEPARATOR   '/'
-  #define COMP_S_SEPARATOR "/"  
+  #define COMP_S_SEPARATOR "/"
 #endif
 /* ENDOF MODIF PMO */
 
@@ -147,47 +114,19 @@ typedef signed char uae_s8;
 
 typedef struct { uae_u8 RGB[3]; } RGB;
 
-#if SIZEOF_SHORT == 2
-typedef unsigned short uae_u16;
-typedef short uae_s16;
-#elif SIZEOF_INT == 2
-typedef unsigned int uae_u16;
-typedef int uae_s16;
-#else
-#error No 2 byte type, you lose.
-#endif
 
-#if SIZEOF_INT == 4
-typedef unsigned int uae_u32;
-typedef int uae_s32;
-#elif SIZEOF_LONG == 4
-typedef unsigned long uae_u32;
-typedef long uae_s32;
-#else
-#error No 4 byte type, you lose.
-#endif
+typedef uint16_t uae_u16;
+typedef int16_t uae_s16;
+typedef uint32_t uae_u32;
+typedef int32_t uae_s32;
 
 typedef uae_u32 uaecptr;
 
-#undef uae_s64
-#undef uae_u64
+typedef uint64_t use_u64;
+typedef int64_t use_s64;
 
-#if SIZEOF_LONG_LONG == 8
-#define uae_s64 long long
-#define uae_u64 long long
 #define VAL64(a) (a ## LL)
 #define UVAL64(a) (a ## uLL)
-#elif SIZEOF___INT64 == 8
-#define uae_s64 __int64
-#define uae_u64 unsigned __int64
-#define VAL64(a) (a)
-#define UVAL64(a) (a)
-#elif SIZEOF_LONG == 8
-#define uae_s64 long;
-#define uae_u64 unsigned long;
-#define VAL64(a) (a ## l)
-#define UVAL64(a) (a ## ul)
-#endif
 
 #ifdef HAVE_STRDUP
 #define my_strdup strdup
@@ -236,7 +175,7 @@ extern void *xmalloc(size_t);
 
 #endif
 
-#endif /* _WIN32 */ 
+#endif /* _WIN32 */
 
 #ifdef DONT_HAVE_POSIX
 

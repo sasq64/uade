@@ -7,7 +7,6 @@
   * Copyright 1996, 1997 Stefan Reinauer, Christian Schmitt
   */
 
-#include "sysconfig.h"
 #include "sysdeps.h"
 #include <assert.h>
 

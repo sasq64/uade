@@ -6,7 +6,6 @@
  * Copyright 1995,1996 Bernd Schmidt
  */
 
-#include "sysconfig.h"
 #include "sysdeps.h"
 
 #include <assert.h>
@@ -57,7 +56,6 @@ int main(int argc, char **argv)
 {
     int no_insns = 0;
 
-    printf ("#include \"sysconfig.h\"\n");
     printf ("#include \"sysdeps.h\"\n");
     printf ("#include \"options.h\"\n");
     printf ("#include \"readcpu.h\"\n");

@@ -6,7 +6,6 @@
  * Copyright 2000 - 2005 Heikki Orsila <heikki.orsila@iki.fi>
  */
 
-#include "sysconfig.h"
 #include "sysdeps.h"
 
 #include "options.h"

@@ -12,7 +12,6 @@
 #include <time.h>
 #include <limits.h>
 
-#include "sysconfig.h"
 #include "sysdeps.h"
 
 #include "options.h"

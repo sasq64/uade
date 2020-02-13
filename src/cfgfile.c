@@ -7,7 +7,6 @@
   * Copyright 1998 Brian King, Bernd Schmidt
   */
 
-#include "sysconfig.h"
 #include "sysdeps.h"
 
 #include <ctype.h>

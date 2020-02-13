@@ -7,7 +7,6 @@
   * Copyright 1995 Alessandro Bissacco
   */
 
-#include "sysconfig.h"
 #include "sysdeps.h"
 
 #include <ctype.h>
