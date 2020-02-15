@@ -40,7 +40,11 @@
 #else
 
 #include <winsock2.h>
-#include <dirent_win32.h>
+#include "../../compat/dirent_win32.h"
+
+char* strsep(char** stringp, const char* delim);
+#define strncasecmp _strnicmp
+#define ftruncate _chsize
 
 #define X_OK 1
 

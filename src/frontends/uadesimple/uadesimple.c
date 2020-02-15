@@ -41,7 +41,10 @@ int main(int argc, char *argv[])
 	int i;
 	const char *fname;
 	const struct uade_song_info *info;
-	struct uade_state *state = uade_new_state(NULL);
+	struct uade_config *config = uade_new_config();
+	uade_config_set_option(config, UC_BASE_DIR, ".");
+    uade_config_set_option(config, UC_SCORE_FILE, "amigasrc/score/score");
+	struct uade_state *state = uade_new_state(config);
 	int ret;
 	size_t size;
 	void *buf;
@@ -51,6 +54,8 @@ int main(int argc, char *argv[])
 
 	if (!audio_init(uade_get_sampling_rate(state)))
 		goto error;
+
+	argc = 2;
 
 	for (i = 1; i < argc; i++) {
 		fname = argv[i];

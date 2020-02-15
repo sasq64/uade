@@ -16,6 +16,7 @@ if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
 elseif(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
   set(WARNINGS ${WARNINGS} ${CLANG_WARNINGS} ${GCC_CLANG_WARNINGS})
 elseif("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC")
+  set(MSVC 1)
   set(WARNINGS ${WARNINGS} ${MSVC_WARNINGS})
 endif()
 add_library(Warnings INTERFACE)
@@ -46,6 +47,10 @@ if(NOT ${HAVE_MEMMEM})
     file(READ compat/memmemrep.h MEMMEM_H_CONTENTS)
 endif()
 
+if(MSVC)
+    set(SUPPORT_SOURCES ${SUPPORT_SOURCES} compat/dirent_win32.c compat/extra_win32.c)
+endif()
+	
 configure_file(ossupport.h.in uade/ossupport.h)
 
 # Configure options
@@ -130,7 +135,7 @@ add_library(corelib STATIC
     ${CMAKE_CURRENT_BINARY_DIR}/cpuemu.c
     ${CMAKE_CURRENT_BINARY_DIR}/cpudefs.c
     ${CMAKE_CURRENT_BINARY_DIR}/cpustbl.c)
-target_link_libraries(corelib PRIVATE Warnings m)
+target_link_libraries(corelib PRIVATE Warnings)
 target_include_directories(corelib PUBLIC
     ${CMAKE_CURRENT_BINARY_DIR}
 	compat
@@ -138,9 +143,12 @@ target_include_directories(corelib PUBLIC
     src/include
     src/frontends/include
 )
+if(NOT MSVC)
+    target_link_libraries(corelib PUBLIC pthread m)
+endif()
 
 add_library(uade STATIC ${UADE_SOURCES} compat/socketpair.c)
-target_link_libraries(uade PUBLIC Warnings m pthread)
+target_link_libraries(uade PUBLIC Warnings)
 target_include_directories(uade PUBLIC
 		compat
         ${CMAKE_CURRENT_SOURCE_DIR}
@@ -152,12 +160,17 @@ if(USE_UADECORE)
     add_executable(uadecore src/main.c)
     target_link_libraries(uadecore PRIVATE corelib)
 else()
-    target_link_libraries(uade PUBLIC corelib pthread)
+    target_link_libraries(uade PUBLIC corelib)
     target_compile_definitions(uade PRIVATE NO_UADECORE)
     target_compile_definitions(corelib PRIVATE NO_UADECORE)
 endif()
 
+if(MSVC)
+	target_link_libraries(corelib PRIVATE ws2_32)
+endif()
+
 if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
+if(NOT MSVC)
     add_executable(uade123
         src/frontends/uade123/audio.c
         src/frontends/uade123/playloop.c
@@ -168,10 +181,11 @@ if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
         src/frontends/common/unixwalkdir.c
     )
     target_link_libraries(uade123 PRIVATE uade ao)
+endif()
 
     add_executable(uadesimple
-        src/frontends/uadesimple/audio.c
+        src/frontends/uadesimple/win-audio.c
         src/frontends/uadesimple/uadesimple.c
     )
-    target_link_libraries(uadesimple PRIVATE uade ao)
+    target_link_libraries(uadesimple PRIVATE uade)
 endif()

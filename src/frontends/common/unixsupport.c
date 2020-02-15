@@ -297,9 +297,14 @@ int uade_arch_spawn(struct uade_ipc *ipc, pid_t *uadepid, const char *uadename)
 
 #else
 
+#ifdef _WIN32
+DWORD uadecore_thread;
+#else
 #include <pthread.h>
-static int spawn_fds[2];
 static pthread_t uadecore_thread;
+#endif
+
+static int spawn_fds[2];
 int dumb_socketpair(int socks[2], int make_overlapped);
 int uadecore_main (int argc, char **argv);
 
@@ -307,11 +312,17 @@ void uade_arch_kill_and_wait_uadecore(struct uade_ipc *ipc, pid_t *uadepid)
 {
     uade_atomic_close(ipc->in_fd);
     uade_atomic_close(ipc->out_fd);
-
+#ifdef _WIN32
+#else
    pthread_join(uadecore_thread, NULL);
+#endif
 }
 
-static void* thread_func(void *data)
+#ifdef _WIN32
+static DWORD WINAPI thread_func(LPVOID data)
+#else
+void* thread_func(void* data)
+#endif
 {
     int *fds = (int*)data;
     char input[32], output[32];
@@ -322,7 +333,7 @@ static void* thread_func(void *data)
 
     char *args[] = { "uadecore", "-i", input, "-o", output };
     uadecore_main(5, args);
-    return NULL;
+    return 0;
 }
 
 int uade_arch_spawn(struct uade_ipc *ipc, pid_t *uadepid, const char *uadename)
@@ -332,8 +343,11 @@ int uade_arch_spawn(struct uade_ipc *ipc, pid_t *uadepid, const char *uadename)
                      strerror(errno));
         return -1;
     }
-
+#ifdef _WIN32
+    CreateThread(NULL, 0, thread_func, spawn_fds, 0, &uadecore_thread);
+#else
     pthread_create(&uadecore_thread, NULL, thread_func, (void*)spawn_fds);
+#endif
     uade_set_peer(ipc, 1, spawn_fds[0], spawn_fds[0]);
     return 0;
 }

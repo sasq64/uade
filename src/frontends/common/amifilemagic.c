@@ -19,6 +19,7 @@
  buffer range is a core dump :)
 */
 
+#include <sysdeps.h>
 #include <uade/uadeutils.h>
 #include <uade/amifilemagic.h>
 
